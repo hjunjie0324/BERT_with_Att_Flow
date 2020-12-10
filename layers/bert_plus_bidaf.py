@@ -56,9 +56,9 @@ class BERT_plus_BiDAF(nn.Module):
         # Additional modeling layer LSTM/Transformer:
         if if_extra_modeling:
             if self.cnn:
-                self.modeling_layer = nn.LSTM(input_size=8*self.hidden_dim,hidden_size=2*self.hidden_dim, num_layers=2)
+                self.modeling_layer = nn.LSTM(input_size=8*self.hidden_dim,hidden_size=2*self.hidden_dim, num_layers=2,bidirectional = True, batch_first = True)
             else:
-                self.modeling_layer = nn.LSTM(input_size=4*self.hidden_dim,hidden_size=2*self.hidden_dim, num_layers=2)
+                self.modeling_layer = nn.LSTM(input_size=4*self.hidden_dim,hidden_size=2*self.hidden_dim, num_layers=2, bidirectional = True, batch_first = True)
         else:
             self.modeling_layer = None
             
@@ -87,7 +87,8 @@ class BERT_plus_BiDAF(nn.Module):
         `end_pos`: the end of the answer span [batch_size]
         """
         # Feed into BERT
-        bert_features, _ = self.bert_layer(input_ids = input_ids, token_type_ids = None, attention_mask = input_mask, output_all_encoded_layers=False) # (N,L,d)
+        with torch.no_grad():
+            bert_features, _ = self.bert_layer(input_ids = input_ids, token_type_ids = None, attention_mask = input_mask, output_all_encoded_layers=False) # (N,L,d)
         # Separate features
         bert_question_features = bert_features[:, 1:self.question_len+1,:] # (N,J,d) J=62
         bert_context_features = torch.cat((bert_features[:, 0, :].unsqueeze(dim=1), bert_features[:, self.question_len+1:, :]), dim=1) # (N,T,d), T=450 NOTE: T+J = 512， context is [CLS][SEP][context][SEP]
