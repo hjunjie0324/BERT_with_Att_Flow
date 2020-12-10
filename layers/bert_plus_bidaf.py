@@ -63,11 +63,16 @@ class BERT_plus_BiDAF(nn.Module):
             self.modeling_layer = None
             
         # Prediction
+        """
         if self.modeling_layer:
             self.prediction_layer = PredictionLayer(feature_dimension=2*self.hidden_dim)
         elif self.cnn:
             self.prediction_layer = PredictionLayer(feature_dimension=8*self.hidden_dim)
         else:
+            self.prediction_layer = PredictionLayer(feature_dimension=4*self.hidden_dim)
+        """
+
+        if self.modeling_layer:
             self.prediction_layer = PredictionLayer(feature_dimension=4*self.hidden_dim)
 
     def forward(self, input_ids, input_mask, start_pos = None, end_pos = None):
@@ -115,6 +120,7 @@ class BERT_plus_BiDAF(nn.Module):
         # If we use extra modeling layer
         if self.modeling_layer:
             combined_features = self.modeling_layer(combined_features)[0] #(N,T,2d)
+                                                                          
         
         start_logits, end_logits = self.prediction_layer(combined_features) # (N,T), (N,T)
         if len(start_logits.shape) == 1:
