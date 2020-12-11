@@ -94,9 +94,7 @@ class Two_BERT_plus_BiDAF(nn.module):
         # If we use extra modeling layer
         if self.modeling_layer:
             combined_features = self.modeling_layer(combined_features)[0] #(N,T,2d)
-            print("size of combined_feature:",combined_features.size())
                                                                           
-        
         start_logits, end_logits = self.prediction_layer(combined_features) # (N,T), (N,T)
         if len(start_logits.shape) == 1:
             start_logits.unsqueeze(dim=0)
