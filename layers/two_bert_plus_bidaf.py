@@ -13,8 +13,8 @@ except ModuleNotFoundError:
     from char_cnn import CharCNN
     from pred_layer import PredictionLayer
 
-class Two_BERT_plus_BiDAF(nn.module):
-    def __init__(self, if_cnn = False, if_extra_modeling = False)
+class Two_BERT_plus_BiDAF(nn.Module):
+    def __init__(self, if_cnn = False, if_extra_modeling = False):
         """
         TODO: consider add a flag replacing the LSTM modeling by transformer
         """
@@ -68,12 +68,14 @@ class Two_BERT_plus_BiDAF(nn.module):
         
         
         # Feed into CNN
+        """
         if self.cnn:
             """ TODO: check the validity here """
             cnn_features = self.cnn(input_ids)
             """ TODO: separate CNN features """
             cnn_context_features = None
             cnn_question_features = None
+        """
 
         # Concatenate and feed into attention
         if self.cnn:
