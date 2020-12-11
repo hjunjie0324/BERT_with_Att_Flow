@@ -6,7 +6,8 @@ import numpy as np
 import collections, time, sys, logging
 #from layers.bert_plus_bidaf import BERT_plus_BiDAF
 from layers.two_bert_plus_bidaf import Two_BERT_plus_BiDAF
-from utils import data_processing
+#from utils import data_processing
+from utils import data_processing_for_two_bert
 from torch.utils.data import DataLoader
 
 class SquadDataset(torch.utils.data.Dataset):
@@ -35,28 +36,37 @@ def train(device, model, optimizer, dataloader, num_epochs = 3):
             
         # Initialize the loss and binary classification error in each epoch
         running_loss = 0.0
-
+        iteration = 1
+        curr_loss = 0.0
         for batch in dataloader:
             # zero the parameter gradients
             optimizer.zero_grad()
             # Send data to GPU
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
+            context_input_ids = batch['context_input_ids'].to(device)
+            context_attention_mask = batch['context_attention_mask'].to(device)
+            question_input_ids = batch['question_input_ids'].to(device)
+            question_attention_mask = batch['question_attention_mask']
             start_positions = batch['start_positions'].to(device)
             end_positions = batch['end_positions'].to(device)
             # Forward computation
             # Get the model outputs
-            outputs = model(input_ids, attention_mask, start_positions, end_positions)
+            outputs = model(context_input_ids, context_attention_mask, question_input_ids, question_attention_mask, start_positions, end_positions)
             loss = outputs[0]
+            curr_loss += loss.item()
+            if iteration % 2000 == 0:
+                logger.info('Iteration: {}'.format(iteration))
+                logger.info('Loss: {:.4f}'.format(curr_loss/2000))
+                curr_loss = 0.0
+            iteration += 1
             # In training phase, backprop and optimize
             loss.backward()
             optimizer.step()                   
             # Compute running loss/accuracy
-            running_loss += loss.item() * input_ids.size(0)
+            running_loss += loss.item()
 
         epoch_loss = running_loss/len(dataloader)
         logger.info('Loss: {:.4f}'.format(epoch_loss))
-        if epoch >= 3:
+        if epoch == 1:
             torch.save(model.state_dict(),'checkpoint.pt')
     # Output info after training
     time_elapsed = time.time() - start
@@ -65,9 +75,12 @@ def train(device, model, optimizer, dataloader, num_epochs = 3):
 
 def main(learing_rate = 5e-5, batch_size = 4, num_epochs = 3):
     train_url = "https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v2.0.json"
-    train_encodings, _ =  data_processing.data_processing(train_url)
+    train_encodings, _ =  data_processing_for_two_bert.data_processing(train_url)
+
+    for key in train_encodings:
+        train_encodings[key] = train_encodings[key][0:100]
+
     train_dataset = SquadDataset(train_encodings)
-    
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     logger.info(device)
 
@@ -91,7 +104,7 @@ def main(learing_rate = 5e-5, batch_size = 4, num_epochs = 3):
     optimizer = optim.Adam(parameters, lr=learing_rate)
     dataloader = DataLoader(train_dataset,batch_size=batch_size,shuffle=True)
     trained_model = train(device, model, optimizer, dataloader, num_epochs=num_epochs)
-    torch.save(trained_model,'trained_model.pt')
+    torch.save(trained_model,'two_bert_model.pt')
 
 if __name__ == "__main__":
     logger = logging.getLogger()
